@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>下午茶訂餐 - 開團者後台</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0;}
+body { font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #f5f5f5; color: #333;}
+header { background: #4a4a4a; color: #fff; padding: 20px; text-align: center;}
+main { max-width: 800px; margin: 0 auto; padding: 16px;}
+.card { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08);}
+.card h2 { font-size: 1.15rem; margin-bottom: 12px; color: #444;}
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;}
+.stat { background: #fff8f0; border-radius: 10px; padding: 14px; text-align: center;}
+.stat.num { font-size: 1.8rem; font-weight: bold; color: #e65100;}
+.stat.label { font-size:.85rem; color: #888;}
+label { display: block; margin: 10px 0 4px; font-weight: bold; font-size:.95rem;}
+input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;}
+.row { display: flex; gap: 8px;}
+.row input { flex: 1;}
+button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 18px; font-size: 1rem;}
+.btn-primary { background: #ff8c42; color: #fff;}
+.btn-danger { background: #ef5350; color: #fff; padding: 6px 12px; font-size:.85rem;}
+.btn-small { padding: 6px 12px; font-size:.85rem; background: #eee;}
+.menu-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px;}
+.menu-row input { flex: 1;}
+.menu-row input.price { max-width: 100px;}
+.order { border-bottom: 1px solid #eee; padding: 12px 0;}
+.order:last-child { border-bottom: none;}
+.order.head { display: flex; justify-content: space-between; font-weight: bold;}
+.order.items { color: #666; font-size:.95rem; margin-top: 4px;}
+.order.note { color: #999; font-size:.9rem;}
+#live-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #66bb6a; margin-right: 6px; animation: blink 1.5s infinite;}
+@keyframes blink { 50% { opacity:.4;}}
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:.95rem;}
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee;}
+th { color: #888; font-weight: normal;}
+</style>
+</head>
+<body>
+<header>
+<h1>開團者後台</h1>
+<p><span id="live-dot"></span>即時監控訂購狀況</p>
+</header>
+<main>
+<!-- 即時統計 -->
+<div class="card">
+<h2>📊 即時統計</h2>
+<div class="stats">
+<div class="stat"><div class="num" id="stat-people">0</div><div class="label">訂購人數</div></div>
+<div class="stat"><div class="num" id="stat-count">0</div><div class="label">總數量（杯/份）</div></div>
+<div class="stat"><div class="num">$<span id="stat-amount">0</span></div><div class="label">結單金額</div></div>
+<div class="stat"><div class="num" id="stat-orders">0</div><div class="label">訂單筆數</div></div>
+</div>
+</div>
+
+<!-- 開團設定 -->
+<div class="card">
+<h2>⚙️ 開團設定</h2>
+<label>團購標題</label>
+<input id="set-title" placeholder="例如：週五下午茶 - 50嵐">
+<label>下單截止時間</label>
+<input id="set-deadline" type="datetime-local">
+<div style="margin-top:12px;"><button class="btn-primary" onclick="saveSession()">儲存設定</button></div>
+</div>
+
+<!-- 菜單管理 -->
+<div class="card">
+<h2>📋 菜單管理（開團者自訂，不固定）</h2>
+<div id="menu-editor"></div>
+<div class="row" style="margin-top:8px;">
+<input id="new-name" placeholder="品項名稱">
+<input id="new-price" type="number" placeholder="價格" style="max-width:100px;">
+<input id="new-cat" placeholder="分類" style="max-width:120px;">
+<button class="btn-small" onclick="addMenuItem()">＋新增</button>
+</div>
+</div>
+
+<!-- 品項彙總 -->
+<div class="card">
+<h2>🧾 各品項彙總</h2>
+<table><thead><tr><th>品項</th><th>數量</th><th>小計</th></tr></thead><tbody id="item-summary"></tbody></table>
+</div>
+
+<!-- 訂單明細 -->
+<div class="card">
+<h2>📝 訂單明細（即時更新）</h2>
+<div id="order-list"><p style="color:#999;">尚無訂單</p></div>
+<div style="margin-top:12px;">
+<button class="btn-small" onclick="exportText()">匯出文字結單</button>
+<button class="btn-danger" onclick="clearOrders()">清空所有訂單</button>
+</div>
+</div>
+</main>
+
+<script src="db.js"></script>
+<script>
+let menu = [], orders = [], session = null;
+
+async function init() {
+session = await DB.getSession();
+menu = await DB.getMenu();
+orders = await DB.getOrders();
+renderAll();
+DB.onSessionChange(s => { session = s; renderSession();});
+DB.onMenuChange(m => { menu = m; renderMenuEditor(); renderStats();});
+DB.onOrdersChange(o => { orders = o; renderStats(); renderOrders();});
+}
+
+function renderAll() { renderSession(); renderMenuEditor(); renderStats(); renderOrders();}
+
+function renderSession() {
+document.getElementById('set-title').value = session?.title || '';
+if (session?.deadline) {
+const d = new Date(session.deadline);
+document.getElementById('set-deadline').value = d.toISOString().slice(0, 16);
+}
+}
+
+async function saveSession() {
+const title = document.getElementById('set-title').value.trim() || '下午茶訂餐';
+const deadline = document.getElementById('set-deadline').value;
+await DB.saveSession({ title, deadline: deadline? new Date(deadline).toISOString(): null});
+alert('設定已儲存，下單頁會即時更新');
+}
+
+function renderMenuEditor() {
+document.getElementById('menu-editor').innerHTML = menu.map(item => `
+<div class="menu-row">
+<input value="${item.name}" onchange="editMenuItem('${item.id}','name',this.value)">
+<input class="price" type="number" value="${item.price}" onchange="editMenuItem('${item.id}','price',this.value)">
+<input value="${item.category || ''}" placeholder="分類" style="max-width:120px" onchange="editMenuItem('${item.id}','category',this.value)">
+<button class="btn-danger" onclick="delMenuItem('${item.id}')">刪除</button>
+</div>`).join('') || '<p style="color:#999;">尚未新增品項</p>';
+}
+async function addMenuItem() {
+const name = document.getElementById('new-name').value.trim();
+const price = parseInt(document.getElementById('new-price').value);
+if (!name ||!price) { alert('請輸入品項名稱和價格'); return;}
+await DB.addMenuItem({ name, price, category: document.getElementById('new-cat').value.trim() || '飲品'});
+document.getElementById('new-name').value = '';
+document.getElementById('new-price').value = '';
+document.getElementById('new-cat').value = '';
+}
+async function editMenuItem(id, field, value) {
+const item = menu.find(m => m.id === id);
+if (field === 'price') value = parseInt(value) || 0;
+await DB.updateMenuItem(id, {...item, [field]: value});
+}
+async function delMenuItem(id) {
+if (confirm('確定刪除這個品項？')) await DB.deleteMenuItem(id);
+}
+
+function renderStats() {
+const people = new Set(orders.map(o => o.ordererName)).size;
+let count = 0, amount = 0;
+const summary = {};
+orders.forEach(o => o.items.forEach(it => {
+count += it.qty; amount += it.qty * it.price;
+summary[it.name] = summary[it.name] || { qty: 0, amount: 0};
+summary[it.name].qty += it.qty;
+summary[it.name].amount += it.qty * it.price;
+}));
+document.getElementById('stat-people').textContent = people;
+document.getElementById('stat-count').textContent = count;
+document.getElementById('stat-amount').textContent = amount;
+document.getElementById('stat-orders').textContent = orders.length;
+document.getElementById('item-summary').innerHTML =
+Object.entries(summary).map(([name, s]) => `<tr><td>${name}</td><td>${s.qty}</td><td>$${s.amount}</td></tr>`).join('')
+|| '<tr><td colspan="3" style="color:#999;">尚無資料</td></tr>';
+}
+
+function renderOrders() {
+const list = document.getElementById('order-list');
+if (!orders.length) { list.innerHTML = '<p style="color:#999;">尚無訂單</p>'; return;}
+list.innerHTML = [...orders].reverse().map(o => `
+<div class="order">
+<div class="head"><span>${o.ordererName}</span><span>$${o.items.reduce((s, it) => s + it.qty * it.price, 0)}</span></div>
+<div class="items">${o.items.map(it => `${it.name} x${it.qty}`).join('、')}</div>
+${o.note? `<div class="note">備註：${o.note}</div>`: ''}
+<div class="note">${new Date(o.createdAt).toLocaleString('zh-TW')}</div>
+</div>`).join('');
+}
+
+function exportText() {
+let txt = `結單\n`;
+txt += `人數：${new Set(orders.map(o => o.ordererName)).size}｜總數：${orders.reduce((s, o) => s + o.items.reduce((a, it) => a + it.qty, 0), 0)}｜總金額：$${document.getElementById('stat-amount').textContent}\n\n`;
+orders.forEach(o => {
+txt += `${o.ordererName}：${o.items.map(it => `${it.name}x${it.qty}`).join('、')}${o.note? `（${o.note}）`: ''}\n`;
+});
+navigator.clipboard.writeText(txt).then(() => alert('結單文字已複製'));
+}
+
+async function clearOrders() {
+if (confirm('確定清空所有訂單？此動作無法復原')) await DB.clearOrders();
+}
+
+init();
+</script>
+</body>
+</html>
