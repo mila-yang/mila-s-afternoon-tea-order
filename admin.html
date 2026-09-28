@@ -104,6 +104,12 @@ tr:last-child td{border-bottom:none}
 .order .items{color:#6B5B45;font-size:.93rem;line-height:1.7}
 .order .note{color:var(--muted);font-size:.85rem;margin-top:6px}
 .hint{font-size:.82rem;color:var(--muted);margin-top:8px;line-height:1.7}
+/* 圖片辨識 */
+#ocr-progress{margin-top:12px}
+#ocr-bar-wrap{background:#F3E9D6;border-radius:999px;height:10px;overflow:hidden}
+#ocr-bar{height:100%;width:0%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-radius:999px;transition:width .2s}
+#ocr-rows .ocr-check{flex:0 0 auto;width:22px;height:22px;accent-color:var(--primary);padding:0}
+#ocr-btn:disabled{opacity:.6;cursor:wait}
 /* 數字鍵盤 */
 #keypad-modal{display:none;position:fixed;inset:0;background:rgba(74,59,44,.45);z-index:999;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .kp-sheet{background:#fff;width:100%;max-width:440px;border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.15)}
@@ -148,6 +154,15 @@ tr:last-child td{border-bottom:none}
   <label>上傳菜單圖片（看著圖片建品項，也會同步顯示在下單頁）</label>
   <input type="file" id="menu-image-upload" accept="image/*" onchange="handleMenuImageUpload(event)">
   <div id="menu-image-preview"></div>
+
+  <label>或直接辨識圖片上的品項（含金額）</label>
+  <div><button class="btn-small" id="ocr-btn" onclick="startOcr()">🔍 辨識圖片品項</button></div>
+  <div id="ocr-progress" style="display:none;">
+    <div id="ocr-bar-wrap"><div id="ocr-bar"></div></div>
+    <p class="hint" id="ocr-status">準備中…</p>
+  </div>
+  <div id="ocr-preview"></div>
+  <p class="hint">第一次使用會下載辨識資料（約十幾 MB），之後就不用了。辨識結果請先檢查再匯入，匯入的品項會記住，下次選店舖時直接從下拉選。</p>
 
   <label>從常用店舖快速帶入（先選店，再選品項）</label>
   <div class="row">
@@ -276,18 +291,34 @@ sel.innerHTML = '<option value="">— 選擇店舖 —</option>' +
 Object.keys(PRESET_STORES).map(s => `<option value="${s}">${s}</option>`).join('');
 document.getElementById('preset-item').innerHTML = '<option value="">— 先選店舖 —</option>';
 }
+// ===== 自訂常用品項（存在這台裝置：辨識或匯入過的會自動記住，下次直接選）=====
+function getCustomPresets() {
+try { return JSON.parse(localStorage.getItem('mila_custom_presets') || '{}'); } catch (e) { return {}; }
+}
+function saveCustomPreset(store, name, price) {
+if (!store || !name || !price) return;
+const c = getCustomPresets();
+c[store] = c[store] || [];
+if (!c[store].some(p => p.name === name)) {
+c[store].push({ name, price, custom: true });
+try { localStorage.setItem('mila_custom_presets', JSON.stringify(c)); } catch (e) {}
+}
+}
+function getStoreItems(store) {
+return (PRESET_STORES[store] || []).concat(getCustomPresets()[store] || []);
+}
 function renderPresetItems() {
 const store = document.getElementById('preset-store').value;
 const sel = document.getElementById('preset-item');
 if (!store) { sel.innerHTML = '<option value="">— 先選店舖 —</option>'; return; }
 sel.innerHTML = '<option value="">— 選擇品項 —</option>' +
-PRESET_STORES[store].map((p, i) => `<option value="${i}">${p.name} $${p.price}</option>`).join('');
+getStoreItems(store).map((p, i) => `<option value="${i}">${p.name} $${p.price}${p.custom ? ' ★' : ''}</option>`).join('');
 }
 function applyPreset() {
 const store = document.getElementById('preset-store').value;
 const idx = document.getElementById('preset-item').value;
 if (!store || idx === '') return;
-const p = PRESET_STORES[store][parseInt(idx)];
+const p = getStoreItems(store)[parseInt(idx)];
 document.getElementById('new-name').value = p.name;
 document.getElementById('new-price').value = p.price;
 document.getElementById('new-cat').value = store === '通用點心' ? '點心' : '飲品';
@@ -339,6 +370,7 @@ pasteItems.map((p, i) => `
 }
 async function confirmPasteImport() {
 let count = 0;
+const store = document.getElementById('preset-store').value;
 for (let i = 0; i < pasteItems.length; i++) {
 const nameEl = document.getElementById('pp-name-' + i);
 const priceEl = document.getElementById('pp-price-' + i);
@@ -346,12 +378,184 @@ const name = nameEl ? nameEl.value.trim() : pasteItems[i].name;
 const price = priceEl ? parseInt(priceEl.value) || 0 : pasteItems[i].price;
 if (!name || !price) continue;
 await DB.addMenuItem({ name, price, category: pasteItems[i].category });
+saveCustomPreset(store, name, price);
 count++;
 }
 document.getElementById('menu-paste').value = '';
 document.getElementById('paste-preview').innerHTML = '';
 pasteItems = [];
 alert(`已匯入 ${count} 個品項`);
+}
+
+// ===== 菜單圖片 OCR 自動辨識（含金額）=====
+let ocrItems = [];
+function loadTesseract() {
+return new Promise((resolve, reject) => {
+if (window.Tesseract) return resolve();
+const s = document.createElement('script');
+s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+s.onload = () => resolve();
+s.onerror = () => reject(new Error('tesseract load failed'));
+document.head.appendChild(s);
+});
+}
+async function startOcr() {
+if (!menuImage) { alert('請先上傳菜單圖片'); return; }
+const btn = document.getElementById('ocr-btn');
+btn.disabled = true;
+btn.textContent = '辨識元件準備中…';
+const prog = document.getElementById('ocr-progress');
+const bar = document.getElementById('ocr-bar');
+const status = document.getElementById('ocr-status');
+prog.style.display = 'block';
+bar.style.width = '0%';
+try {
+await loadTesseract();
+} catch (e) {
+prog.style.display = 'none';
+btn.disabled = false;
+btn.textContent = '🔍 辨識圖片品項';
+alert('辨識元件載入失敗，請檢查網路連線後再試一次');
+return;
+}
+btn.textContent = '辨識中…';
+status.textContent = '正在辨識圖片文字，請稍候…';
+try {
+const result = await Tesseract.recognize(menuImage, 'chi_tra+eng', {
+logger: m => {
+if (m.status === 'recognizing text') {
+const pct = Math.round((m.progress || 0) * 100);
+bar.style.width = pct + '%';
+status.textContent = '辨識中 ' + pct + '%…';
+} else if (m.status === 'loading tesseract core') {
+status.textContent = '載入辨識核心…';
+} else if (m.status === 'loading language traineddata') {
+status.textContent = '下載繁體中文辨識資料（第一次比較久）…';
+}
+}
+});
+ocrItems = parseOcrText(result.data.text || '');
+} catch (e) {
+prog.style.display = 'none';
+btn.disabled = false;
+btn.textContent = '🔍 辨識圖片品項';
+alert('辨識失敗，請換一張清晰一點的圖片再試');
+return;
+}
+prog.style.display = 'none';
+btn.disabled = false;
+btn.textContent = '🔍 辨識圖片品項';
+renderOcrPreview();
+}
+function fullToHalf(s) {
+return s.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+}
+function parseOcrText(text) {
+const items = [];
+const seen = new Set();
+const existing = new Set(menu.map(m => m.name));
+function addCandidate(name, price) {
+name = String(name)
+.replace(/^[★☆●○■□◆◇※・•\-–—\d\s.、:：;；,，()（）\[\]]+/, '')
+.replace(/^(推薦|招牌|人氣|新品|限量|熱銷|必點|暢銷)\s*/, '')
+.trim();
+if (!name || !price || price < 5 || price > 9999) return;
+if (seen.has(name) || existing.has(name)) return;
+seen.add(name);
+items.push({ name, price, checked: true });
+}
+text.split('\n').forEach(raw => {
+let line = fullToHalf(raw).replace(/(\d)\s+(?=\d)/g, '$1').trim();
+if (!line || !/\d/.test(line)) return;
+let m = line.match(/^(.+?)[\s:：$＄\-–—|｜,，\/]+(\d{2,3})\/(\d{2,3})\s*(元)?$/);
+if (m) {
+addCandidate(m[1].trim() + '(小)', parseInt(m[2]));
+addCandidate(m[1].trim() + '(大)', parseInt(m[3]));
+return;
+}
+m = line.match(/^(.+?)[\s:：$＄\-–—|｜,，\/]+(\d{2,4})\s*(元)?$/);
+if (m) { addCandidate(m[1], parseInt(m[2])); return; }
+m = line.match(/^(\d{2,4})\s*(元)?[\s:：$＄\-–—|｜,，\/]+(.+)$/);
+if (m) { addCandidate(m[3], parseInt(m[1])); return; }
+m = line.match(/^([^\d]+?)(\d{2,4})\s*(元)?$/);
+if (m) { addCandidate(m[1], parseInt(m[2])); return; }
+});
+return items;
+}
+function ocrStoreOptions() {
+const cur = document.getElementById('preset-store').value;
+return Object.keys(PRESET_STORES).map(s => `<option value="${s}"${s === cur ? ' selected' : ''}>${s}</option>`).join('');
+}
+function renderOcrPreview() {
+const box = document.getElementById('ocr-preview');
+if (!ocrItems.length) {
+box.innerHTML = '<p class="hint">沒有辨識到品項。可能是圖片太模糊、字體太藝術或排版特殊，建議改用「貼上菜單文字」或手動新增。</p>';
+return;
+}
+box.innerHTML =
+`<p class="hint" style="font-weight:700;color:var(--ink);">辨識到 ${ocrItems.length} 個品項，請檢查修改後再匯入：</p>` +
+`<label>這批品項屬於哪家店（匯入後會記住，下次直接從下拉選）</label>` +
+`<select id="ocr-store">${ocrStoreOptions()}</select>` +
+`<div style="display:flex;gap:10px;margin:10px 0;">` +
+`<button class="btn-small" onclick="ocrToggleAll(true)">全選</button>` +
+`<button class="btn-small" onclick="ocrToggleAll(false)">取消全選</button></div>` +
+`<div id="ocr-rows">` +
+ocrItems.map((p, i) => `
+<div class="menu-row">
+<input type="checkbox" class="ocr-check"${p.checked ? ' checked' : ''} onchange="ocrItems[${i}].checked=this.checked">
+<input value="${p.name.replace(/"/g, '&quot;')}" id="ocr-name-${i}" style="flex:2;">
+<input value="${p.price}" placeholder="價格" readonly onclick="openOcrKeypad(${i})" id="ocr-price-${i}" style="flex:1;background:#FFF9F0;cursor:pointer;">
+<button class="btn-danger" onclick="removeOcrItem(${i})">移除</button>
+</div>`).join('') +
+`</div>` +
+`<div style="display:flex;gap:10px;margin-top:12px;">` +
+`<button class="btn-primary" onclick="confirmOcrImport()">確認匯入</button>` +
+`<button class="btn-small" onclick="cancelOcr()">取消</button></div>`;
+}
+function ocrToggleAll(v) {
+ocrItems.forEach(p => p.checked = v);
+document.querySelectorAll('#ocr-rows .ocr-check').forEach(c => c.checked = v);
+}
+function removeOcrItem(i) {
+ocrItems.splice(i, 1);
+renderOcrPreview();
+}
+function cancelOcr() {
+ocrItems = [];
+document.getElementById('ocr-preview').innerHTML = '';
+}
+function openOcrKeypad(i) {
+const input = document.getElementById('ocr-price-' + i);
+openKeypad(input, null);
+const origConfirm = window.keypadConfirm;
+window.keypadConfirm = function() {
+const v = parseInt(keypadValue) || 0;
+if (keypadTarget) keypadTarget.value = v;
+ocrItems[i].price = v;
+closeKeypad();
+window.keypadConfirm = origConfirm;
+};
+}
+async function confirmOcrImport() {
+const store = document.getElementById('ocr-store').value;
+const category = store === '通用點心' ? '點心' : '飲品';
+let count = 0;
+for (let i = 0; i < ocrItems.length; i++) {
+const nameEl = document.getElementById('ocr-name-' + i);
+const priceEl = document.getElementById('ocr-price-' + i);
+if (!nameEl || !priceEl) continue;
+if (!ocrItems[i].checked) continue;
+const name = nameEl.value.trim();
+const price = parseInt(priceEl.value) || 0;
+if (!name || !price) continue;
+await DB.addMenuItem({ name, price, category });
+saveCustomPreset(store, name, price);
+count++;
+}
+ocrItems = [];
+document.getElementById('ocr-preview').innerHTML = '';
+renderPresetStores();
+alert(`已匯入 ${count} 個品項${store ? `（已記住為「${store}」常用品項）` : ''}`);
 }
 
 // ===== 數字鍵盤 =====
