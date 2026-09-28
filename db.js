@@ -32,7 +32,7 @@ const FIREBASE_CONFIG = {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
 // ---------- 本機模式 (localStorage) ----------
-const LS_KEYS = { session: 'tea_session', menu: 'tea_menu', orders: 'tea_orders' };
+const LS_KEYS = { session: 'tea_session', menu: 'tea_menu', orders: 'tea_orders', menuImage: 'tea_menu_image' };
 function lsGet(key, fallback) {
   try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }
   catch { return fallback; }
@@ -41,14 +41,14 @@ function lsSet(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
   window.dispatchEvent(new CustomEvent('tea-data-change', { detail: { key } }));
 }
-const lsListeners = { session: [], menu: [], orders: [] };
+const lsListeners = { session: [], menu: [], orders: [], menuImage: [] };
 window.addEventListener('tea-data-change', (e) => {
-  const map = { [LS_KEYS.session]: 'session', [LS_KEYS.menu]: 'menu', [LS_KEYS.orders]: 'orders' };
+  const map = { [LS_KEYS.session]: 'session', [LS_KEYS.menu]: 'menu', [LS_KEYS.orders]: 'orders', [LS_KEYS.menuImage]: 'menuImage' };
   const type = map[e.detail.key];
   if (type) lsListeners[type].forEach(fn => fn(lsGet(e.detail.key, (type === 'menu' || type === 'orders') ? [] : null)));
 });
 window.addEventListener('storage', (e) => {
-  const map = { [LS_KEYS.session]: 'session', [LS_KEYS.menu]: 'menu', [LS_KEYS.orders]: 'orders' };
+  const map = { [LS_KEYS.session]: 'session', [LS_KEYS.menu]: 'menu', [LS_KEYS.orders]: 'orders', [LS_KEYS.menuImage]: 'menuImage' };
   const type = map[e.key];
   if (type) lsListeners[type].forEach(fn => fn(lsGet(e.key, (type === 'menu' || type === 'orders') ? [] : null)));
 });
@@ -66,6 +66,11 @@ const LocalDB = {
   async addOrder(order) { const o = await this.getOrders(); o.push({ id: uid(), ...order }); lsSet(LS_KEYS.orders, o); },
   async clearOrders() { lsSet(LS_KEYS.orders, []); },
   onOrdersChange(fn) { lsListeners.orders.push(fn); },
+
+  // ===== 菜單圖片 =====
+  async getMenuImage() { return lsGet(LS_KEYS.menuImage, null); },
+  async setMenuImage(dataUrl) { lsSet(LS_KEYS.menuImage, dataUrl); },
+  onMenuImageChange(fn) { lsListeners.menuImage.push(fn); },
 };
 
 // ---------- Firebase 模式 ----------
@@ -101,6 +106,11 @@ const FirebaseDB = {
   async addOrder(order) { const id = uid(); await firebaseDB.ref('orders/' + id).set({ id, ...order }); },
   async clearOrders() { await firebaseDB.ref('orders').remove(); },
   onOrdersChange(fn) { firebaseDB.ref('orders').on('value', snap => fn(snapList(snap))); },
+
+  // ===== 菜單圖片 =====
+  async getMenuImage() { return snapVal(await firebaseDB.ref('menuImage').once('value'), null); },
+  async setMenuImage(dataUrl) { if (dataUrl) await firebaseDB.ref('menuImage').set(dataUrl); else await firebaseDB.ref('menuImage').remove(); },
+  onMenuImageChange(fn) { firebaseDB.ref('menuImage').on('value', snap => fn(snap.val())); },
 };
 
 // ---------- 自動選擇模式 ----------
