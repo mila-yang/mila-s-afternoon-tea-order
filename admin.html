@@ -2,133 +2,212 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>下午茶訂餐 - 開團者後台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0;}
-body { font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #f5f5f5; color: #333;}
-header { background: #4a4a4a; color: #fff; padding: 20px; text-align: center;}
-main { max-width: 800px; margin: 0 auto; padding: 16px;}
-.card { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08);}
-.card h2 { font-size: 1.15rem; margin-bottom: 12px; color: #444;}
-.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;}
-.stat { background: #fff8f0; border-radius: 10px; padding: 14px; text-align: center;}
-.stat.num { font-size: 1.8rem; font-weight: bold; color: #e65100;}
-.stat.label { font-size:.85rem; color: #888;}
-label { display: block; margin: 10px 0 4px; font-weight: bold; font-size:.95rem;}
-input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;}
-.row { display: flex; gap: 8px;}
-.row input { flex: 1;}
-button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 18px; font-size: 1rem;}
-.btn-primary { background: #ff8c42; color: #fff;}
-.btn-danger { background: #ef5350; color: #fff; padding: 6px 12px; font-size:.85rem;}
-.btn-small { padding: 6px 12px; font-size:.85rem; background: #eee;}
-.menu-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px;}
-.menu-row input { flex: 1;}
-.menu-row input.price { max-width: 100px;}
-.order { border-bottom: 1px solid #eee; padding: 12px 0;}
-.order:last-child { border-bottom: none;}
-.order.head { display: flex; justify-content: space-between; font-weight: bold;}
-.order.items { color: #666; font-size:.95rem; margin-top: 4px;}
-.order.note { color: #999; font-size:.9rem;}
-#live-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #66bb6a; margin-right: 6px; animation: blink 1.5s infinite;}
-@keyframes blink { 50% { opacity:.4;}}
-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:.95rem;}
-th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee;}
-th { color: #888; font-weight: normal;}
+:root{
+  --bg:#FAF6EE; --card:#FFFFFF; --ink:#4A3B2C; --muted:#A08E78;
+  --primary:#BE8050; --primary-dark:#A26B3E; --primary-soft:#F7EAD7;
+  --line:#EEE1CC; --danger:#C06A5A; --danger-soft:#F9EDE9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Noto Sans TC",sans-serif;color:var(--ink);background:var(--bg);
+  background-image:radial-gradient(#EFE3CF 1px,transparent 1.2px);background-size:24px 24px;
+  -webkit-tap-highlight-color:transparent;
+}
+header{
+  background:linear-gradient(150deg,#F6DDBD 0%,#EDC49C 60%,#E5B588 100%);
+  padding:40px 20px 34px;text-align:center;
+  border-radius:0 0 32px 32px;
+  box-shadow:0 10px 30px rgba(190,140,90,.20);
+  position:relative;overflow:hidden;
+}
+header::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 20% 0%,rgba(255,255,255,.35),transparent 55%);
+  pointer-events:none;
+}
+header h1{
+  font-family:"Noto Serif TC",serif;font-size:1.7rem;font-weight:700;
+  letter-spacing:.3em;text-indent:.3em;color:#5A3D22;position:relative;
+}
+header p{margin-top:8px;color:#8A6544;font-size:.88rem;letter-spacing:.2em;text-indent:.2em;position:relative}
+main{max-width:640px;margin:0 auto;padding:22px 16px 60px}
+.card{
+  background:var(--card);border:1px solid #F3E9D6;border-radius:22px;
+  padding:24px 20px;margin-bottom:18px;
+  box-shadow:0 6px 20px rgba(190,140,90,.10);
+}
+.card h2{
+  font-family:"Noto Serif TC",serif;font-size:1.18rem;font-weight:700;color:#5A3D22;
+  letter-spacing:.12em;margin-bottom:18px;display:flex;align-items:center;gap:10px;
+}
+.card h2::after{content:"";flex:1;height:1px;background:var(--line)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.stat{
+  border-radius:18px;padding:18px 16px;text-align:center;border:1px solid transparent;
+}
+.stat .num{font-family:"Noto Serif TC",serif;font-size:1.9rem;font-weight:700}
+.stat .lbl{font-size:.82rem;margin-top:6px;letter-spacing:.14em}
+.stat.s1{background:#FBF1E2;border-color:#F0DFC2}.stat.s1 .num{color:#A26B3E}.stat.s1 .lbl{color:#B08D5E}
+.stat.s2{background:#F3F5EE;border-color:#DFE5D6}.stat.s2 .num{color:#6E7F5E}.stat.s2 .lbl{color:#8A9B7E}
+.stat.s3{background:#FBF0E8;border-color:#F0D5C2}.stat.s3 .num{color:#B0563F}.stat.s3 .lbl{color:#C08A76}
+.stat.s4{background:#F1EFE9;border-color:#DED8C8}.stat.s4 .num{color:#6B5D43}.stat.s4 .lbl{color:#9A8A6E}
+label{display:block;font-size:.85rem;color:var(--muted);margin:16px 0 8px;letter-spacing:.1em}
+label:first-child{margin-top:0}
+input,select,textarea{
+  width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px 15px;
+  font-size:1rem;font-family:inherit;color:var(--ink);background:#FDFAF4;outline:none;
+  transition:border-color .2s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);background:#fff}
+textarea{resize:vertical}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+.btn-primary{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;border:none;border-radius:999px;padding:13px 30px;font-size:.98rem;font-weight:700;
+  cursor:pointer;font-family:inherit;letter-spacing:.12em;
+  box-shadow:0 6px 18px rgba(190,128,80,.30);transition:transform .15s;
+}
+.btn-primary:active{transform:scale(.96)}
+.btn-small{
+  background:var(--primary-soft);color:var(--primary-dark);border:1px solid #EAD3B4;
+  border-radius:999px;padding:10px 22px;font-size:.92rem;font-weight:500;cursor:pointer;
+  font-family:inherit;letter-spacing:.08em;transition:all .15s;white-space:nowrap;
+}
+.btn-small:active{transform:scale(.95);background:#F2DFC4}
+.btn-danger{
+  background:var(--danger-soft);color:var(--danger);border:1px solid #EBCFC6;
+  border-radius:999px;padding:9px 18px;font-size:.88rem;cursor:pointer;font-family:inherit;
+  white-space:nowrap;
+}
+.menu-row{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.menu-row input{padding:10px 12px;font-size:.95rem}
+.menu-row .btn-danger{flex-shrink:0}
+#menu-image-preview img{width:100%;border-radius:16px;margin:10px 0;box-shadow:0 6px 18px rgba(190,140,90,.15);cursor:zoom-in}
+#menu-image-preview .btn-danger{margin-bottom:6px}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th{color:var(--muted);font-weight:500;font-size:.85rem;letter-spacing:.1em;padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+td{padding:11px 8px;border-bottom:1px solid #F5EDDD}
+tr:last-child td{border-bottom:none}
+.order{
+  background:#FDFAF4;border:1px solid #F3E9D6;border-radius:16px;
+  padding:15px 17px;margin-bottom:12px;
+}
+.order .head{display:flex;justify-content:space-between;font-weight:700;font-size:1.02rem;margin-bottom:6px}
+.order .head span:last-child{color:var(--primary-dark)}
+.order .items{color:#6B5B45;font-size:.93rem;line-height:1.7}
+.order .note{color:var(--muted);font-size:.85rem;margin-top:6px}
+.hint{font-size:.82rem;color:var(--muted);margin-top:8px;line-height:1.7}
+/* 數字鍵盤 */
+#keypad-modal{display:none;position:fixed;inset:0;background:rgba(74,59,44,.45);z-index:999;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.kp-sheet{background:#fff;width:100%;max-width:440px;border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.15)}
+#keypad-display{font-family:"Noto Serif TC",serif;font-size:2.2rem;font-weight:700;text-align:right;padding:12px 18px;background:var(--bg);border-radius:16px;margin-bottom:14px;min-height:70px;color:#5A3D22}
+.kp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kp-btn{font-size:1.5rem;padding:15px;border-radius:16px;border:1px solid var(--line);background:#FDFAF4;cursor:pointer;font-family:inherit;color:var(--ink);transition:all .12s}
+.kp-btn:active{background:var(--primary);color:#fff;border-color:var(--primary);transform:scale(.94)}
+.kp-btn.fn{color:var(--danger);font-size:1.2rem}
 </style>
 </head>
 <body>
 <header>
-<h1>開團者後台</h1>
-<p><span id="live-dot"></span>即時監控訂購狀況</p>
+  <h1>開團者後台</h1>
+  <p>即時監控訂購狀況</p>
 </header>
 <main>
+
 <!-- 即時統計 -->
 <div class="card">
-<h2>📊 即時統計</h2>
-<div class="stats">
-<div class="stat"><div class="num" id="stat-people">0</div><div class="label">訂購人數</div></div>
-<div class="stat"><div class="num" id="stat-count">0</div><div class="label">總數量（杯/份）</div></div>
-<div class="stat"><div class="num">$<span id="stat-amount">0</span></div><div class="label">結單金額</div></div>
-<div class="stat"><div class="num" id="stat-orders">0</div><div class="label">訂單筆數</div></div>
-</div>
+  <h2>即時統計</h2>
+  <div class="stats">
+    <div class="stat s1"><div class="num" id="stat-people">0</div><div class="lbl">訂購人數</div></div>
+    <div class="stat s2"><div class="num" id="stat-count">0</div><div class="lbl">總數量</div></div>
+    <div class="stat s3"><div class="num">$<span id="stat-amount">0</span></div><div class="lbl">結單金額</div></div>
+    <div class="stat s4"><div class="num" id="stat-orders">0</div><div class="lbl">訂單筆數</div></div>
+  </div>
 </div>
 
 <!-- 開團設定 -->
 <div class="card">
-<h2>⚙️ 開團設定</h2>
-<label>團購標題</label>
-<input id="set-title" placeholder="例如：週五下午茶 - 50嵐">
-<label>下單截止時間</label>
-<input id="set-deadline" type="datetime-local">
-<div style="margin-top:12px;"><button class="btn-primary" onclick="saveSession()">儲存設定</button></div>
+  <h2>開團設定</h2>
+  <label>團購標題</label>
+  <input id="set-title" placeholder="例如：週五下午茶 - 50嵐">
+  <label>下單截止時間</label>
+  <input id="set-deadline" type="datetime-local">
+  <div style="margin-top:16px;"><button class="btn-primary" onclick="saveSession()">儲存設定</button></div>
 </div>
 
 <!-- 菜單管理 -->
 <div class="card">
-<h2>📋 菜單管理（開團者自訂，不固定）</h2>
-<label>上傳菜單圖片（看著圖片建品項，也會同步顯示在下單頁給同事看）</label>
-<input type="file" id="menu-image-upload" accept="image/*" onchange="handleMenuImageUpload(event)">
-<div id="menu-image-preview"></div>
-<div id="menu-editor"></div>
-<label style="margin-top:4px;">從常用店舖快速帶入（先選店，再選品項）</label>
-<div class="row">
-<select id="preset-store" onchange="renderPresetItems()" style="flex:1;"></select>
-<select id="preset-item" onchange="applyPreset()" style="flex:2;"></select>
-</div>
-<label style="margin-top:12px;">或貼上菜單文字自動解析（看著菜單一次建好）</label>
-<textarea id="menu-paste" rows="4" placeholder="每行一個品項，名稱和價格用空格分開，例如：&#10;珍珠奶茶 60&#10;紅茶拿鐵 55&#10;布丁奶茶 $60"></textarea>
-<div style="margin-top:8px;"><button class="btn-small" onclick="previewMenuPaste()">解析預覽</button></div>
-<div id="paste-preview"></div>
-<label style="margin-top:12px;">手動新增單一品項</label>
-<div class="row" style="margin-top:8px;">
-<input id="new-name" placeholder="品項名稱">
-<input id="new-price" placeholder="點我輸入金額" readonly onclick="openKeypad(this)" style="max-width:110px;background:#fff8f0;cursor:pointer;">
-<input id="new-cat" placeholder="分類" style="max-width:120px;">
-<button class="btn-small" onclick="addMenuItem()">＋新增</button>
-</div>
+  <h2>菜單管理</h2>
+  <label>上傳菜單圖片（看著圖片建品項，也會同步顯示在下單頁）</label>
+  <input type="file" id="menu-image-upload" accept="image/*" onchange="handleMenuImageUpload(event)">
+  <div id="menu-image-preview"></div>
+
+  <label>從常用店舖快速帶入（先選店，再選品項）</label>
+  <div class="row">
+    <select id="preset-store" onchange="renderPresetItems()"></select>
+    <select id="preset-item" onchange="applyPreset()"></select>
+  </div>
+
+  <label>或貼上菜單文字自動解析（看著菜單一次建好）</label>
+  <textarea id="menu-paste" rows="4" placeholder="每行一個品項，名稱和價格用空格分開，例如：&#10;珍珠奶茶 60&#10;紅茶拿鐵 55"></textarea>
+  <div style="margin-top:10px;"><button class="btn-small" onclick="previewMenuPaste()">解析預覽</button></div>
+  <div id="paste-preview"></div>
+
+  <label>手動新增單一品項</label>
+  <div class="menu-row">
+    <input id="new-name" placeholder="品項名稱" style="flex:2;">
+    <input id="new-price" placeholder="點我輸入金額" readonly onclick="openKeypad(this)" style="flex:1;background:#FFF9F0;cursor:pointer;">
+    <input id="new-cat" placeholder="分類" style="flex:1;">
+    <button class="btn-small" onclick="addMenuItem()" style="flex-shrink:0;">新增</button>
+  </div>
+  <div id="menu-editor" style="margin-top:14px;"></div>
 </div>
 
 <!-- 品項彙總 -->
 <div class="card">
-<h2>🧾 各品項彙總</h2>
-<table><thead><tr><th>品項</th><th>數量</th><th>小計</th></tr></thead><tbody id="item-summary"></tbody></table>
+  <h2>各品項彙總</h2>
+  <table><thead><tr><th>品項</th><th>數量</th><th>小計</th></tr></thead><tbody id="item-summary"></tbody></table>
 </div>
 
 <!-- 訂單明細 -->
 <div class="card">
-<h2>📝 訂單明細（即時更新）</h2>
-<div id="order-list"><p style="color:#999;">尚無訂單</p></div>
-<div style="margin-top:12px;">
-<button class="btn-small" onclick="exportText()">匯出文字結單</button>
-<button class="btn-danger" onclick="clearOrders()">清空所有訂單</button>
-</div>
+  <h2>訂單明細</h2>
+  <div id="order-list"><p style="color:var(--muted);">尚無訂單</p></div>
+  <div style="margin-top:16px;display:flex;gap:10px;">
+    <button class="btn-small" onclick="exportText()">匯出文字結單</button>
+    <button class="btn-danger" onclick="clearOrders()">清空所有訂單</button>
+  </div>
 </div>
 </main>
 
-<!-- 數字鍵盤（點金額時跳出，像手機一樣） -->
-<div id="keypad-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeKeypad()">
-<div style="background:#fff;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:20px;">
-<div id="keypad-display" style="font-size:2rem;text-align:right;padding:10px 14px;background:#f5f5f5;border-radius:10px;margin-bottom:12px;min-height:60px;">0</div>
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-<button class="kp-btn" onclick="keypadPress('1')">1</button>
-<button class="kp-btn" onclick="keypadPress('2')">2</button>
-<button class="kp-btn" onclick="keypadPress('3')">3</button>
-<button class="kp-btn" onclick="keypadPress('4')">4</button>
-<button class="kp-btn" onclick="keypadPress('5')">5</button>
-<button class="kp-btn" onclick="keypadPress('6')">6</button>
-<button class="kp-btn" onclick="keypadPress('7')">7</button>
-<button class="kp-btn" onclick="keypadPress('8')">8</button>
-<button class="kp-btn" onclick="keypadPress('9')">9</button>
-<button class="kp-btn" onclick="keypadPress('clear')" style="color:#ef5350;">C</button>
-<button class="kp-btn" onclick="keypadPress('0')">0</button>
-<button class="kp-btn" onclick="keypadPress('back')">⌫</button>
+<!-- 數字鍵盤 -->
+<div id="keypad-modal" onclick="if(event.target===this)closeKeypad()">
+  <div class="kp-sheet">
+    <div id="keypad-display">0</div>
+    <div class="kp-grid">
+      <button class="kp-btn" onclick="keypadPress('1')">1</button>
+      <button class="kp-btn" onclick="keypadPress('2')">2</button>
+      <button class="kp-btn" onclick="keypadPress('3')">3</button>
+      <button class="kp-btn" onclick="keypadPress('4')">4</button>
+      <button class="kp-btn" onclick="keypadPress('5')">5</button>
+      <button class="kp-btn" onclick="keypadPress('6')">6</button>
+      <button class="kp-btn" onclick="keypadPress('7')">7</button>
+      <button class="kp-btn" onclick="keypadPress('8')">8</button>
+      <button class="kp-btn" onclick="keypadPress('9')">9</button>
+      <button class="kp-btn fn" onclick="keypadPress('clear')">清除</button>
+      <button class="kp-btn" onclick="keypadPress('0')">0</button>
+      <button class="kp-btn fn" onclick="keypadPress('back')">⌫</button>
+    </div>
+    <button class="btn-primary" style="width:100%;margin-top:14px;" onclick="keypadConfirm()">確認</button>
+  </div>
 </div>
-<button class="btn-primary" style="width:100%;margin-top:12px;" onclick="keypadConfirm()">確認</button>
-</div>
-</div>
-<style>.kp-btn{font-size:1.5rem;padding:14px;border-radius:12px;border:1px solid #ddd;background:#fafafa;cursor:pointer;}.kp-btn:active{background:#ff8c42;color:#fff;}</style>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
@@ -215,7 +294,7 @@ document.getElementById('new-cat').value = store === '通用點心' ? '點心' :
 document.getElementById('preset-item').value = '';
 }
 
-// ===== 貼上菜單文字自動解析（一行一個品項，看著菜單key）=====
+// ===== 貼上菜單文字自動解析 =====
 let pasteItems = [];
 function previewMenuPaste() {
 const text = document.getElementById('menu-paste').value;
@@ -227,20 +306,12 @@ if (m) return { name: m[1].trim(), price: parseInt(m[2]), category: store === '�
 return { name: line, price: 0, needPrice: true };
 });
 const box = document.getElementById('paste-preview');
-if (!pasteItems.length) { box.innerHTML = '<p style="color:#999;">沒有解析到品項，請確認每行格式如「珍珠奶茶 60」</p>'; return; }
-box.innerHTML = `<p style="font-weight:bold;margin:8px 0;">解析到 ${pasteItems.length} 個品項，可直接修改後匯入：</p>` +
-pasteItems.map((p, i) => `
-<div class="menu-row">
-<input value="${p.name.replace(/"/g, '&quot;')}" id="pp-name-${i}">
-<input value="${p.price || ''}" placeholder="價格" readonly onclick="openPasteKeypad(${i})" style="max-width:100px;background:#fff8f0;cursor:pointer;" id="pp-price-${i}">
-<button class="btn-danger" onclick="removePasteItem(${i})">移除</button>
-</div>`).join('') +
-`<button class="btn-primary" style="margin-top:8px;" onclick="confirmPasteImport()">確認匯入 ${pasteItems.length} 個品項</button>`;
+if (!pasteItems.length) { box.innerHTML = '<p class="hint">沒有解析到品項，請確認每行格式如「珍珠奶茶 60」</p>'; return; }
+previewMenuPasteRefresh();
 }
 function openPasteKeypad(i) {
 const input = document.getElementById('pp-price-' + i);
 openKeypad(input, null);
-// 覆寫確認行為：只填值不存DB
 const origConfirm = window.keypadConfirm;
 window.keypadConfirm = function() {
 const v = parseInt(keypadValue) || 0;
@@ -257,14 +328,14 @@ previewMenuPasteRefresh();
 function previewMenuPasteRefresh() {
 const box = document.getElementById('paste-preview');
 if (!pasteItems.length) { box.innerHTML = ''; return; }
-box.innerHTML = `<p style="font-weight:bold;margin:8px 0;">解析到 ${pasteItems.length} 個品項，可直接修改後匯入：</p>` +
+box.innerHTML = `<p class="hint" style="font-weight:700;color:var(--ink);">解析到 ${pasteItems.length} 個品項，可直接修改後匯入：</p>` +
 pasteItems.map((p, i) => `
 <div class="menu-row">
-<input value="${p.name.replace(/"/g, '&quot;')}" id="pp-name-${i}">
-<input value="${p.price || ''}" placeholder="價格" readonly onclick="openPasteKeypad(${i})" style="max-width:100px;background:#fff8f0;cursor:pointer;" id="pp-price-${i}">
+<input value="${p.name.replace(/"/g, '&quot;')}" id="pp-name-${i}" style="flex:2;">
+<input value="${p.price || ''}" placeholder="價格" readonly onclick="openPasteKeypad(${i})" style="flex:1;background:#FFF9F0;cursor:pointer;" id="pp-price-${i}">
 <button class="btn-danger" onclick="removePasteItem(${i})">移除</button>
 </div>`).join('') +
-`<button class="btn-primary" style="margin-top:8px;" onclick="confirmPasteImport()">確認匯入 ${pasteItems.length} 個品項</button>`;
+`<button class="btn-primary" style="margin-top:10px;" onclick="confirmPasteImport()">確認匯入 ${pasteItems.length} 個品項</button>`;
 }
 async function confirmPasteImport() {
 let count = 0;
@@ -283,7 +354,7 @@ pasteItems = [];
 alert(`已匯入 ${count} 個品項`);
 }
 
-// ===== 數字鍵盤（像手機一樣點選輸入金額）=====
+// ===== 數字鍵盤 =====
 let keypadTarget = null, keypadItemId = null, keypadValue = '';
 function openKeypad(input, itemId) {
 keypadTarget = input;
@@ -309,7 +380,7 @@ document.getElementById('keypad-modal').style.display = 'none';
 keypadTarget = null; keypadItemId = null; keypadValue = '';
 }
 
-// ===== 菜單圖片上傳（看著圖片建品項）=====
+// ===== 菜單圖片上傳 =====
 let menuImage = null;
 function handleMenuImageUpload(event) {
 const file = event.target.files[0];
@@ -319,7 +390,6 @@ const reader = new FileReader();
 reader.onload = (e) => {
 const img = new Image();
 img.onload = () => {
-// 壓縮：最長邊縮到 1000px，轉 JPEG，控制傳輸大小
 const maxSide = 1000;
 const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
 const canvas = document.createElement('canvas');
@@ -337,7 +407,7 @@ event.target.value = '';
 function renderMenuImage() {
 const box = document.getElementById('menu-image-preview');
 if (!menuImage) { box.innerHTML = ''; return; }
-box.innerHTML = `<img src="${menuImage}" style="max-width:100%;border-radius:10px;margin:8px 0;cursor:zoom-in;" onclick="window.open('${menuImage}')">` +
+box.innerHTML = `<img src="${menuImage}" onclick="window.open('${menuImage}')" alt="菜單圖片">` +
 `<div><button class="btn-danger" onclick="removeMenuImage()">刪除圖片</button></div>`;
 }
 async function removeMenuImage() {
@@ -345,7 +415,7 @@ if (confirm('確定刪除菜單圖片？下單頁也不會再顯示')) await DB.
 }
 
 async function init() {
-renderPresetStores(); // 建議店舖是固定的，不用等資料庫，先畫出來
+renderPresetStores();
 session = await DB.getSession();
 menu = await DB.getMenu();
 orders = await DB.getOrders();
@@ -378,11 +448,11 @@ alert('設定已儲存，下單頁會即時更新');
 function renderMenuEditor() {
 document.getElementById('menu-editor').innerHTML = menu.map(item => `
 <div class="menu-row">
-<input value="${item.name}" onchange="editMenuItem('${item.id}','name',this.value)">
-<input class="price" value="${item.price}" readonly onclick="openKeypad(this,'${item.id}')" title="點一下開啟數字鍵盤" style="cursor:pointer;background:#fff8f0;">
-<input value="${item.category || ''}" placeholder="分類" style="max-width:120px" onchange="editMenuItem('${item.id}','category',this.value)">
+<input value="${item.name}" onchange="editMenuItem('${item.id}','name',this.value)" style="flex:2;">
+<input value="${item.price}" readonly onclick="openKeypad(this,'${item.id}')" title="點一下開啟數字鍵盤" style="flex:1;cursor:pointer;background:#FFF9F0;">
+<input value="${item.category || ''}" placeholder="分類" style="flex:1;" onchange="editMenuItem('${item.id}','category',this.value)">
 <button class="btn-danger" onclick="delMenuItem('${item.id}')">刪除</button>
-</div>`).join('') || '<p style="color:#999;">尚未新增品項</p>';
+</div>`).join('') || '<p class="hint">尚未新增品項</p>';
 }
 async function addMenuItem() {
 const name = document.getElementById('new-name').value.trim();
@@ -418,12 +488,12 @@ document.getElementById('stat-amount').textContent = amount;
 document.getElementById('stat-orders').textContent = orders.length;
 document.getElementById('item-summary').innerHTML =
 Object.entries(summary).map(([name, s]) => `<tr><td>${name}</td><td>${s.qty}</td><td>$${s.amount}</td></tr>`).join('')
-|| '<tr><td colspan="3" style="color:#999;">尚無資料</td></tr>';
+|| '<tr><td colspan="3" style="color:var(--muted);">尚無資料</td></tr>';
 }
 
 function renderOrders() {
 const list = document.getElementById('order-list');
-if (!orders.length) { list.innerHTML = '<p style="color:#999;">尚無訂單</p>'; return;}
+if (!orders.length) { list.innerHTML = '<p style="color:var(--muted);">尚無訂單</p>'; return;}
 list.innerHTML = [...orders].reverse().map(o => `
 <div class="order">
 <div class="head"><span>${o.ordererName}</span><span>$${o.items.reduce((s, it) => s + it.qty * it.price, 0)}</span></div>

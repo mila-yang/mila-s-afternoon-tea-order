@@ -2,56 +2,137 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>下午茶訂餐 - 下單</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>下午茶訂餐</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #fff8f0; color: #333; line-height: 1.6; }
-  header { background: #ff8c42; color: #fff; padding: 20px; text-align: center; }
-  header h1 { font-size: 1.5rem; }
-  #deadline-bar { background: #fff3e0; padding: 12px 20px; text-align: center; font-weight: bold; color: #e65100; border-bottom: 2px solid #ffcc80; }
-  #deadline-bar.closed { background: #ffebee; color: #c62828; }
-  main { max-width: 640px; margin: 0 auto; padding: 16px; }
-  .category-title { margin: 20px 0 10px; font-size: 1.1rem; color: #bf5b00; border-left: 4px solid #ff8c42; padding-left: 8px; }
-  .menu-item { background: #fff; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  .menu-item .info .name { font-weight: bold; }
-  .menu-item .info .price { color: #e65100; font-weight: bold; }
-  .qty-ctrl { display: flex; align-items: center; gap: 10px; }
-  .qty-ctrl button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ff8c42; background: #fff; color: #ff8c42; font-size: 1.2rem; cursor: pointer; }
-  .qty-ctrl button:active { background: #ff8c42; color: #fff; }
-  .qty-ctrl .qty { min-width: 24px; text-align: center; font-weight: bold; }
-  #order-form { background: #fff; border-radius: 12px; padding: 16px; margin-top: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  #order-form label { display: block; margin: 10px 0 4px; font-weight: bold; }
-  #order-form input, #order-form textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; }
-  #total-bar { position: sticky; bottom: 0; background: #fff; border-top: 2px solid #ffcc80; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
-  #total-bar .total { font-size: 1.3rem; font-weight: bold; color: #e65100; }
-  #submit-btn { background: #ff8c42; color: #fff; border: none; border-radius: 10px; padding: 12px 28px; font-size: 1.1rem; cursor: pointer; }
-  #submit-btn:disabled { background: #ccc; cursor: not-allowed; }
-  #success-msg { display: none; background: #e8f5e9; border: 1px solid #66bb6a; border-radius: 10px; padding: 16px; margin-top: 16px; text-align: center; }
+:root{
+  --bg:#FAF6EE; --card:#FFFFFF; --ink:#4A3B2C; --muted:#A08E78;
+  --primary:#BE8050; --primary-dark:#A26B3E; --primary-soft:#F7EAD7;
+  --line:#EEE1CC; --sage:#8A9B7E;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:"Noto Sans TC",sans-serif;color:var(--ink);background:var(--bg);
+  background-image:radial-gradient(#EFE3CF 1px,transparent 1.2px);background-size:24px 24px;
+  padding-bottom:120px;-webkit-tap-highlight-color:transparent;
+}
+header{
+  background:linear-gradient(150deg,#F6DDBD 0%,#EDC49C 60%,#E5B588 100%);
+  padding:52px 20px 44px;text-align:center;
+  border-radius:0 0 36px 36px;
+  box-shadow:0 10px 30px rgba(190,140,90,.20);
+  position:relative;overflow:hidden;
+}
+header::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 20% 0%,rgba(255,255,255,.35),transparent 55%);
+  pointer-events:none;
+}
+header h1{
+  font-family:"Noto Serif TC",serif;font-size:2rem;font-weight:700;
+  letter-spacing:.4em;text-indent:.4em;color:#5A3D22;position:relative;
+}
+header p{margin-top:10px;color:#8A6544;font-size:.92rem;letter-spacing:.22em;text-indent:.22em;position:relative}
+#deadline-bar{
+  max-width:520px;margin:-20px auto 0;position:relative;z-index:2;
+  background:var(--card);border:1px solid var(--line);
+  padding:11px 22px;border-radius:999px;text-align:center;
+  font-size:.9rem;font-weight:500;color:var(--primary-dark);
+  box-shadow:0 6px 18px rgba(190,140,90,.14);
+  width:calc(100% - 40px);
+}
+#deadline-bar.closed{color:#B0563F;background:#FBF0EA;border-color:#EFD5C8}
+main{max-width:560px;margin:0 auto;padding:22px 18px 0}
+#menu-image-box{margin-bottom:6px}
+#menu-image-box button{
+  width:100%;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:13px;font-size:.95rem;color:var(--ink);cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 14px rgba(190,140,90,.08);letter-spacing:.08em;
+}
+#menu-image{width:100%;border-radius:18px;margin-top:10px;box-shadow:0 8px 24px rgba(190,140,90,.16);cursor:pointer}
+.category-title{
+  font-family:"Noto Serif TC",serif;font-size:1.12rem;font-weight:600;color:#6B4E30;
+  margin:26px 4px 12px;display:flex;align-items:center;gap:12px;letter-spacing:.15em;
+}
+.category-title::after{content:"";flex:1;height:1px;background:var(--line)}
+.menu-item{
+  background:var(--card);border:1px solid #F3E9D6;border-radius:18px;
+  padding:15px 18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;
+  box-shadow:0 5px 16px rgba(190,140,90,.09);
+}
+.menu-item .info .name{font-weight:500;font-size:1.02rem}
+.menu-item .info .price{color:var(--primary-dark);font-weight:700;margin-top:4px;font-size:1.02rem}
+.qty-ctrl{display:flex;align-items:center;gap:12px}
+.qty-ctrl button{
+  width:36px;height:36px;border-radius:50%;border:1.5px solid var(--primary);
+  background:#fff;color:var(--primary);font-size:1.25rem;cursor:pointer;line-height:1;
+  transition:all .15s;
+}
+.qty-ctrl button:active{background:var(--primary);color:#fff;transform:scale(.92)}
+.qty-ctrl .qty{min-width:26px;text-align:center;font-weight:700;font-size:1.05rem}
+#order-form{
+  background:var(--card);border:1px solid #F3E9D6;border-radius:20px;
+  padding:22px;margin-top:26px;box-shadow:0 5px 16px rgba(190,140,90,.09);
+}
+#order-form label{display:block;font-size:.88rem;color:var(--muted);margin:14px 0 7px;letter-spacing:.08em}
+#order-form label:first-child{margin-top:0}
+#order-form input,#order-form textarea{
+  width:100%;border:1.5px solid var(--line);border-radius:13px;padding:12px 15px;
+  font-size:1rem;font-family:inherit;color:var(--ink);background:#FDFAF4;outline:none;
+  transition:border-color .2s;
+}
+#order-form input:focus,#order-form textarea:focus{border-color:var(--primary);background:#fff}
+#success-msg{
+  display:none;background:#F2F6EE;border:1px solid #D9E4D2;color:#5F7A52;
+  padding:14px 18px;border-radius:16px;margin-top:16px;text-align:center;font-weight:500;
+}
+#total-bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:rgba(255,255,255,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);border-radius:24px 24px 0 0;
+  padding:16px 22px calc(16px + env(safe-area-inset-bottom));
+  display:flex;justify-content:space-between;align-items:center;
+  box-shadow:0 -8px 28px rgba(190,140,90,.14);
+  max-width:560px;margin:0 auto;
+}
+#total-bar .total{font-family:"Noto Serif TC",serif;font-size:1.25rem;font-weight:700;color:#5A3D22}
+#total-bar .total span{color:var(--primary-dark)}
+#submit-btn{
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff;border:none;border-radius:999px;padding:14px 34px;font-size:1.02rem;font-weight:700;
+  cursor:pointer;font-family:inherit;letter-spacing:.12em;
+  box-shadow:0 6px 18px rgba(190,128,80,.35);transition:transform .15s;
+}
+#submit-btn:active{transform:scale(.96)}
+#submit-btn:disabled{background:#D8CBB6;box-shadow:none;cursor:not-allowed}
+.empty-note{text-align:center;color:var(--muted);padding:48px 20px;font-size:.95rem;letter-spacing:.06em;line-height:2}
 </style>
 </head>
 <body>
 <header>
   <h1 id="group-title">下午茶訂餐</h1>
-  <p>選擇你想喝的下午茶吧！</p>
+  <p>選擇你想喝的下午茶吧</p>
 </header>
 <div id="deadline-bar">載入中…</div>
 <main>
-  <div id="menu-image-box" style="display:none;margin-bottom:8px;">
-    <button onclick="toggleMenuImage()" style="width:100%;background:#fff;border:1px solid #ffcc80;border-radius:10px;padding:10px;font-size:1rem;cursor:pointer;">📷 查看店家菜單圖片</button>
-    <img id="menu-image" style="display:none;max-width:100%;border-radius:12px;margin-top:8px;" onclick="toggleMenuImage()">
+  <div id="menu-image-box" style="display:none;">
+    <button onclick="toggleMenuImage()">查看店家菜單圖片</button>
+    <img id="menu-image" style="display:none;" onclick="toggleMenuImage()" alt="店家菜單">
   </div>
   <div id="menu-list"></div>
   <div id="order-form">
     <label for="orderer-name">訂購人姓名</label>
-    <input id="orderer-name" type="text" placeholder="請輸入你的名字">
+    <input id="orderer-name" type="text" placeholder="請輸入你的名字" autocomplete="off">
     <label for="order-note">備註（甜度、冰塊等）</label>
     <textarea id="order-note" rows="2" placeholder="例如：半糖去冰"></textarea>
   </div>
-  <div id="success-msg">✅ 下單成功！開團者已經可以看到你的訂單了。</div>
+  <div id="success-msg">下單成功！開團者已經可以看到你的訂單了。</div>
 </main>
 <div id="total-bar">
-  <div class="total">總計：$<span id="total-amount">0</span></div>
+  <div class="total">總計 $<span id="total-amount">0</span></div>
   <button id="submit-btn">送出訂單</button>
 </div>
 
@@ -59,10 +140,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 <script src="db.js"></script>
 <script>
-// ===== 下單頁邏輯 =====
-let menu = [];
-let cart = {}; // menuId -> qty
-let session = null;
+let menu = [], session = null, cart = {};
 
 async function init() {
   session = await DB.getSession();
@@ -70,14 +148,12 @@ async function init() {
   renderSession();
   renderMenu();
   updateTotal();
+  renderMenuImage(await DB.getMenuImage());
+  DB.onMenuImageChange((url) => renderMenuImage(url));
 
   // 監聽即時更新（開團者改菜單或截止時間時自動刷新）
   DB.onSessionChange((s) => { session = s; renderSession(); });
   DB.onMenuChange((m) => { menu = m; renderMenu(); updateTotal(); });
-
-  // 菜單圖片（開團者上傳的）
-  renderMenuImage(await DB.getMenuImage());
-  DB.onMenuImageChange((url) => renderMenuImage(url));
 }
 
 function renderMenuImage(url) {
@@ -98,7 +174,7 @@ function renderSession() {
   const deadline = new Date(session.deadline);
   const now = new Date();
   if (now > deadline) {
-    bar.textContent = '⛔ 已截止下單';
+    bar.textContent = '已截止下單';
     bar.classList.add('closed');
     document.getElementById('submit-btn').disabled = true;
   } else {
@@ -113,7 +189,7 @@ function tickCountdown(deadline, bar) {
     const diff = deadline - new Date();
     if (diff <= 0) { renderSession(); return; }
     const h = Math.floor(diff / 3600000), m = Math.floor(diff % 3600000 / 60000), s = Math.floor(diff % 60000 / 1000);
-    bar.textContent = `⏰ 距離截止還有 ${h}時 ${m}分 ${s}秒（${deadline.toLocaleString('zh-TW')} 截止）`;
+    bar.textContent = `距離截止還有 ${h}時 ${m}分 ${s}秒`;
     setTimeout(update, 1000);
   }
   update();
@@ -121,7 +197,7 @@ function tickCountdown(deadline, bar) {
 
 function renderMenu() {
   const list = document.getElementById('menu-list');
-  if (!menu.length) { list.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">開團者尚未設定菜單，請稍後再來。</p>'; return; }
+  if (!menu.length) { list.innerHTML = '<div class="empty-note">開團者尚未設定菜單<br>請稍後再來。</div>'; return; }
   const cats = [...new Set(menu.map(i => i.category || '其他'))];
   list.innerHTML = cats.map(cat => `
     <div class="category-title">${cat}</div>
@@ -129,9 +205,9 @@ function renderMenu() {
       <div class="menu-item">
         <div class="info"><div class="name">${item.name}</div><div class="price">$${item.price}</div></div>
         <div class="qty-ctrl">
-          <button onclick="changeQty('${item.id}', -1)">−</button>
+          <button onclick="changeQty('${item.id}', -1)" aria-label="減少">−</button>
           <span class="qty" id="qty-${item.id}">${cart[item.id] || 0}</span>
-          <button onclick="changeQty('${item.id}', 1)">＋</button>
+          <button onclick="changeQty('${item.id}', 1)" aria-label="增加">＋</button>
         </div>
       </div>`).join('')}
   `).join('');
