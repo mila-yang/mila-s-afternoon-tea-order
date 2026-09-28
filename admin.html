@@ -3,7 +3,418 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>下午茶訂餐 - <!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>下午茶訂餐 - 開團者後台</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0;}
+body { font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #f5f5f5; color: #333;}
+header { background: #4a4a4a; color: #fff; padding: 20px; text-align: center;}
+main { max-width: 800px; margin: 0 auto; padding: 16px;}
+.card { background: #fff; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08);}
+.card h2 { font-size: 1.15rem; margin-bottom: 12px; color: #444;}
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;}
+.stat { background: #fff8f0; border-radius: 10px; padding: 14px; text-align: center;}
+.stat.num { font-size: 1.8rem; font-weight: bold; color: #e65100;}
+.stat.label { font-size:.85rem; color: #888;}
+label { display: block; margin: 10px 0 4px; font-weight: bold; font-size:.95rem;}
+input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;}
+.row { display: flex; gap: 8px;}
+.row input { flex: 1;}
+button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 18px; font-size: 1rem;}
+.btn-primary { background: #ff8c42; color: #fff;}
+.btn-danger { background: #ef5350; color: #fff; padding: 6px 12px; font-size:.85rem;}
+.btn-small { padding: 6px 12px; font-size:.85rem; background: #eee;}
+.menu-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px;}
+.menu-row input { flex: 1;}
+.menu-row input.price { max-width: 100px;}
+.order { border-bottom: 1px solid #eee; padding: 12px 0;}
+.order:last-child { border-bottom: none;}
+.order.head { display: flex; justify-content: space-between; font-weight: bold;}
+.order.items { color: #666; font-size:.95rem; margin-top: 4px;}
+.order.note { color: #999; font-size:.9rem;}
+#live-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #66bb6a; margin-right: 6px; animation: blink 1.5s infinite;}
+@keyframes blink { 50% { opacity:.4;}}
+table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size:.95rem;}
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee;}
+th { color: #888; font-weight: normal;}
+</style>
+</head>
+<body>
+<header>
+<h1>開團者後台</h1>
+<p><span id="live-dot"></span>即時監控訂購狀況</p>
+</header>
+<main>
+<!-- 即時統計 -->
+<div class="card">
+<h2>📊 即時統計</h2>
+<div class="stats">
+<div class="stat"><div class="num" id="stat-people">0</div><div class="label">訂購人數</div></div>
+<div class="stat"><div class="num" id="stat-count">0</div><div class="label">總數量（杯/份）</div></div>
+<div class="stat"><div class="num">$<span id="stat-amount">0</span></div><div class="label">結單金額</div></div>
+<div class="stat"><div class="num" id="stat-orders">0</div><div class="label">訂單筆數</div></div>
+</div>
+</div>
+
+<!-- 開團設定 -->
+<div class="card">
+<h2>⚙️ 開團設定</h2>
+<label>團購標題</label>
+<input id="set-title" placeholder="例如：週五下午茶 - 50嵐">
+<label>下單截止時間</label>
+<input id="set-deadline" type="datetime-local">
+<div style="margin-top:12px;"><button class="btn-primary" onclick="saveSession()">儲存設定</button></div>
+</div>
+
+<!-- 菜單管理 -->
+<div class="card">
+<h2>📋 菜單管理（開團者自訂，不固定）</h2>
+<div id="menu-editor"></div>
+<label style="margin-top:4px;">從常用店舖快速帶入（先選店，再選品項）</label>
+<div class="row">
+<select id="preset-store" onchange="renderPresetItems()" style="flex:1;"></select>
+<select id="preset-item" onchange="applyPreset()" style="flex:2;"></select>
+</div>
+<label style="margin-top:12px;">或貼上菜單文字自動解析（看著菜單一次建好）</label>
+<textarea id="menu-paste" rows="4" placeholder="每行一個品項，名稱和價格用空格分開，例如：&#10;珍珠奶茶 60&#10;紅茶拿鐵 55&#10;布丁奶茶 $60"></textarea>
+<div style="margin-top:8px;"><button class="btn-small" onclick="previewMenuPaste()">解析預覽</button></div>
+<div id="paste-preview"></div>
+<label style="margin-top:12px;">手動新增單一品項</label>
+<div class="row" style="margin-top:8px;">
+<input id="new-name" placeholder="品項名稱">
+<input id="new-price" placeholder="點我輸入金額" readonly onclick="openKeypad(this)" style="max-width:110px;background:#fff8f0;cursor:pointer;">
+<input id="new-cat" placeholder="分類" style="max-width:120px;">
+<button class="btn-small" onclick="addMenuItem()">＋新增</button>
+</div>
+</div>
+
+<!-- 品項彙總 -->
+<div class="card">
+<h2>🧾 各品項彙總</h2>
+<table><thead><tr><th>品項</th><th>數量</th><th>小計</th></tr></thead><tbody id="item-summary"></tbody></table>
+</div>
+
+<!-- 訂單明細 -->
+<div class="card">
+<h2>📝 訂單明細（即時更新）</h2>
+<div id="order-list"><p style="color:#999;">尚無訂單</p></div>
+<div style="margin-top:12px;">
+<button class="btn-small" onclick="exportText()">匯出文字結單</button>
+<button class="btn-danger" onclick="clearOrders()">清空所有訂單</button>
+</div>
+</div>
+</main>
+
+<!-- 數字鍵盤（點金額時跳出，像手機一樣） -->
+<div id="keypad-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeKeypad()">
+<div style="background:#fff;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:20px;">
+<div id="keypad-display" style="font-size:2rem;text-align:right;padding:10px 14px;background:#f5f5f5;border-radius:10px;margin-bottom:12px;min-height:60px;">0</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+<button class="kp-btn" onclick="keypadPress('1')">1</button>
+<button class="kp-btn" onclick="keypadPress('2')">2</button>
+<button class="kp-btn" onclick="keypadPress('3')">3</button>
+<button class="kp-btn" onclick="keypadPress('4')">4</button>
+<button class="kp-btn" onclick="keypadPress('5')">5</button>
+<button class="kp-btn" onclick="keypadPress('6')">6</button>
+<button class="kp-btn" onclick="keypadPress('7')">7</button>
+<button class="kp-btn" onclick="keypadPress('8')">8</button>
+<button class="kp-btn" onclick="keypadPress('9')">9</button>
+<button class="kp-btn" onclick="keypadPress('clear')" style="color:#ef5350;">C</button>
+<button class="kp-btn" onclick="keypadPress('0')">0</button>
+<button class="kp-btn" onclick="keypadPress('back')">⌫</button>
+</div>
+<button class="btn-primary" style="width:100%;margin-top:12px;" onclick="keypadConfirm()">確認</button>
+</div>
+</div>
+<style>.kp-btn{font-size:1.5rem;padding:14px;border-radius:12px;border:1px solid #ddd;background:#fafafa;cursor:pointer;}.kp-btn:active{background:#ff8c42;color:#fff;}</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+<script src="db.js"></script>
+<script>
+let menu = [], orders = [], session = null;
+
+// ===== 常用飲料店建議品項資料庫（先選店，再選品項，不用自己key）=====
+const PRESET_STORES = {
+"50嵐": [
+{ name: "珍珠奶茶", price: 50 },
+{ name: "奶茶", price: 45 },
+{ name: "紅茶拿鐵", price: 55 },
+{ name: "烏龍奶茶", price: 50 },
+{ name: "波霸奶茶", price: 50 },
+{ name: "椰果奶茶", price: 50 },
+{ name: "四季春青茶", price: 30 },
+{ name: "冰淇淋紅茶", price: 45 },
+],
+"清心福全": [
+{ name: "珍珠紅茶拿鐵", price: 60 },
+{ name: "優多綠茶", price: 50 },
+{ name: "太妃紅茶", price: 45 },
+{ name: "蜂蜜綠茶", price: 45 },
+{ name: "多多綠茶", price: 45 },
+{ name: "珍珠奶綠", price: 55 },
+],
+"迷客夏": [
+{ name: "大甲芋頭鮮奶", price: 75 },
+{ name: "珍珠紅茶拿鐵", price: 60 },
+{ name: "伯爵紅茶拿鐵", price: 60 },
+{ name: "柳橙綠茶", price: 55 },
+{ name: "手炒黑糖鮮奶", price: 70 },
+],
+"麻古茶坊": [
+{ name: "楊枝甘露2.0", price: 75 },
+{ name: "芝芝葡萄果粒", price: 80 },
+{ name: "珍珠奶茶", price: 60 },
+{ name: "翡翠檸檬茶", price: 55 },
+{ name: "金萱雙Q", price: 60 },
+],
+"CoCo": [
+{ name: "珍珠奶茶", price: 55 },
+{ name: "三兄弟", price: 65 },
+{ name: "百香雙響炮", price: 60 },
+{ name: "檸檬奇遇桔", price: 50 },
+{ name: "鮮芋青稞大紅袍拿鐵", price: 70 },
+],
+"一芳": [
+{ name: "粉圓鮮奶茶", price: 60 },
+{ name: "一芳水果茶", price: 65 },
+{ name: "鹿港麵茶鮮奶", price: 65 },
+{ name: "古早味粉圓豆花", price: 55 },
+],
+"通用點心": [
+{ name: "雞蛋糕(6顆)", price: 40 },
+{ name: "車輪餅", price: 35 },
+{ name: "葡式蛋撻", price: 45 },
+{ name: "蔥抓餅", price: 40 },
+],
+};
+
+function renderPresetStores() {
+const sel = document.getElementById('preset-store');
+sel.innerHTML = '<option value="">— 選擇店舖 —</option>' +
+Object.keys(PRESET_STORES).map(s => `<option value="${s}">${s}</option>`).join('');
+document.getElementById('preset-item').innerHTML = '<option value="">— 先選店舖 —</option>';
+}
+function renderPresetItems() {
+const store = document.getElementById('preset-store').value;
+const sel = document.getElementById('preset-item');
+if (!store) { sel.innerHTML = '<option value="">— 先選店舖 —</option>'; return; }
+sel.innerHTML = '<option value="">— 選擇品項 —</option>' +
+PRESET_STORES[store].map((p, i) => `<option value="${i}">${p.name} $${p.price}</option>`).join('');
+}
+function applyPreset() {
+const store = document.getElementById('preset-store').value;
+const idx = document.getElementById('preset-item').value;
+if (!store || idx === '') return;
+const p = PRESET_STORES[store][parseInt(idx)];
+document.getElementById('new-name').value = p.name;
+document.getElementById('new-price').value = p.price;
+document.getElementById('new-cat').value = store === '通用點心' ? '點心' : '飲品';
+document.getElementById('preset-item').value = '';
+}
+
+// ===== 貼上菜單文字自動解析（一行一個品項，看著菜單key）=====
+let pasteItems = [];
+function previewMenuPaste() {
+const text = document.getElementById('menu-paste').value;
+const store = document.getElementById('preset-store').value;
+const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+pasteItems = lines.map(line => {
+const m = line.match(/^(.+?)[\s:：$＄\-–—|｜,，\/]+(\d+)\s*(?:元)?$/);
+if (m) return { name: m[1].trim(), price: parseInt(m[2]), category: store === '通用點心' ? '點心' : (store || '飲品') };
+return { name: line, price: 0, needPrice: true };
+});
+const box = document.getElementById('paste-preview');
+if (!pasteItems.length) { box.innerHTML = '<p style="color:#999;">沒有解析到品項，請確認每行格式如「珍珠奶茶 60」</p>'; return; }
+box.innerHTML = `<p style="font-weight:bold;margin:8px 0;">解析到 ${pasteItems.length} 個品項，可直接修改後匯入：</p>` +
+pasteItems.map((p, i) => `
+<div class="menu-row">
+<input value="${p.name.replace(/"/g, '&quot;')}" id="pp-name-${i}">
+<input value="${p.price || ''}" placeholder="價格" readonly onclick="openPasteKeypad(${i})" style="max-width:100px;background:#fff8f0;cursor:pointer;" id="pp-price-${i}">
+<button class="btn-danger" onclick="removePasteItem(${i})">移除</button>
+</div>`).join('') +
+`<button class="btn-primary" style="margin-top:8px;" onclick="confirmPasteImport()">確認匯入 ${pasteItems.length} 個品項</button>`;
+}
+function openPasteKeypad(i) {
+const input = document.getElementById('pp-price-' + i);
+openKeypad(input, null);
+// 覆寫確認行為：只填值不存DB
+const origConfirm = window.keypadConfirm;
+window.keypadConfirm = function() {
+const v = parseInt(keypadValue) || 0;
+if (keypadTarget) keypadTarget.value = v;
+pasteItems[i].price = v;
+closeKeypad();
+window.keypadConfirm = origConfirm;
+};
+}
+function removePasteItem(i) {
+pasteItems.splice(i, 1);
+previewMenuPasteRefresh();
+}
+function previewMenuPasteRefresh() {
+const box = document.getElementById('paste-preview');
+if (!pasteItems.length) { box.innerHTML = ''; return; }
+box.innerHTML = `<p style="font-weight:bold;margin:8px 0;">解析到 ${pasteItems.length} 個品項，可直接修改後匯入：</p>` +
+pasteItems.map((p, i) => `
+<div class="menu-row">
+<input value="${p.name.replace(/"/g, '&quot;')}" id="pp-name-${i}">
+<input value="${p.price || ''}" placeholder="價格" readonly onclick="openPasteKeypad(${i})" style="max-width:100px;background:#fff8f0;cursor:pointer;" id="pp-price-${i}">
+<button class="btn-danger" onclick="removePasteItem(${i})">移除</button>
+</div>`).join('') +
+`<button class="btn-primary" style="margin-top:8px;" onclick="confirmPasteImport()">確認匯入 ${pasteItems.length} 個品項</button>`;
+}
+async function confirmPasteImport() {
+let count = 0;
+for (let i = 0; i < pasteItems.length; i++) {
+const nameEl = document.getElementById('pp-name-' + i);
+const priceEl = document.getElementById('pp-price-' + i);
+const name = nameEl ? nameEl.value.trim() : pasteItems[i].name;
+const price = priceEl ? parseInt(priceEl.value) || 0 : pasteItems[i].price;
+if (!name || !price) continue;
+await DB.addMenuItem({ name, price, category: pasteItems[i].category });
+count++;
+}
+document.getElementById('menu-paste').value = '';
+document.getElementById('paste-preview').innerHTML = '';
+pasteItems = [];
+alert(`已匯入 ${count} 個品項`);
+}
+
+// ===== 數字鍵盤（像手機一樣點選輸入金額）=====
+let keypadTarget = null, keypadItemId = null, keypadValue = '';
+function openKeypad(input, itemId) {
+keypadTarget = input;
+keypadItemId = itemId || null;
+keypadValue = input.value || '';
+document.getElementById('keypad-display').textContent = keypadValue || '0';
+document.getElementById('keypad-modal').style.display = 'flex';
+}
+function keypadPress(k) {
+if (k === 'clear') keypadValue = '';
+else if (k === 'back') keypadValue = keypadValue.slice(0, -1);
+else if (keypadValue.length < 6) keypadValue += k;
+document.getElementById('keypad-display').textContent = keypadValue || '0';
+}
+function keypadConfirm() {
+const v = parseInt(keypadValue) || 0;
+if (keypadTarget) keypadTarget.value = v;
+if (keypadItemId) editMenuItem(keypadItemId, 'price', v);
+closeKeypad();
+}
+function closeKeypad() {
+document.getElementById('keypad-modal').style.display = 'none';
+keypadTarget = null; keypadItemId = null; keypadValue = '';
+}
+
+async function init() {
+session = await DB.getSession();
+menu = await DB.getMenu();
+orders = await DB.getOrders();
+renderAll();
+renderPresetSelect();
+DB.onSessionChange(s => { session = s; renderSession();});
+DB.onMenuChange(m => { menu = m; renderMenuEditor(); renderStats();});
+DB.onOrdersChange(o => { orders = o; renderStats(); renderOrders();});
+}
+
+function renderAll() { renderSession(); renderMenuEditor(); renderStats(); renderOrders();}
+
+function renderSession() {
+document.getElementById('set-title').value = session?.title || '';
+if (session?.deadline) {
+const d = new Date(session.deadline);
+document.getElementById('set-deadline').value = d.toISOString().slice(0, 16);
+}
+}
+
+async function saveSession() {
+const title = document.getElementById('set-title').value.trim() || '下午茶訂餐';
+const deadline = document.getElementById('set-deadline').value;
+await DB.saveSession({ title, deadline: deadline? new Date(deadline).toISOString(): null});
+alert('設定已儲存，下單頁會即時更新');
+}
+
+function renderMenuEditor() {
+document.getElementById('menu-editor').innerHTML = menu.map(item => `
+<div class="menu-row">
+<input value="${item.name}" onchange="editMenuItem('${item.id}','name',this.value)">
+<input class="price" value="${item.price}" readonly onclick="openKeypad(this,'${item.id}')" title="點一下開啟數字鍵盤" style="cursor:pointer;background:#fff8f0;">
+<input value="${item.category || ''}" placeholder="分類" style="max-width:120px" onchange="editMenuItem('${item.id}','category',this.value)">
+<button class="btn-danger" onclick="delMenuItem('${item.id}')">刪除</button>
+</div>`).join('') || '<p style="color:#999;">尚未新增品項</p>';
+}
+async function addMenuItem() {
+const name = document.getElementById('new-name').value.trim();
+const price = parseInt(document.getElementById('new-price').value);
+if (!name ||!price) { alert('請輸入品項名稱和價格'); return;}
+await DB.addMenuItem({ name, price, category: document.getElementById('new-cat').value.trim() || '飲品'});
+document.getElementById('new-name').value = '';
+document.getElementById('new-price').value = '';
+document.getElementById('new-cat').value = '';
+}
+async function editMenuItem(id, field, value) {
+const item = menu.find(m => m.id === id);
+if (field === 'price') value = parseInt(value) || 0;
+await DB.updateMenuItem(id, {...item, [field]: value});
+}
+async function delMenuItem(id) {
+if (confirm('確定刪除這個品項？')) await DB.deleteMenuItem(id);
+}
+
+function renderStats() {
+const people = new Set(orders.map(o => o.ordererName)).size;
+let count = 0, amount = 0;
+const summary = {};
+orders.forEach(o => o.items.forEach(it => {
+count += it.qty; amount += it.qty * it.price;
+summary[it.name] = summary[it.name] || { qty: 0, amount: 0};
+summary[it.name].qty += it.qty;
+summary[it.name].amount += it.qty * it.price;
+}));
+document.getElementById('stat-people').textContent = people;
+document.getElementById('stat-count').textContent = count;
+document.getElementById('stat-amount').textContent = amount;
+document.getElementById('stat-orders').textContent = orders.length;
+document.getElementById('item-summary').innerHTML =
+Object.entries(summary).map(([name, s]) => `<tr><td>${name}</td><td>${s.qty}</td><td>$${s.amount}</td></tr>`).join('')
+|| '<tr><td colspan="3" style="color:#999;">尚無資料</td></tr>';
+}
+
+function renderOrders() {
+const list = document.getElementById('order-list');
+if (!orders.length) { list.innerHTML = '<p style="color:#999;">尚無訂單</p>'; return;}
+list.innerHTML = [...orders].reverse().map(o => `
+<div class="order">
+<div class="head"><span>${o.ordererName}</span><span>$${o.items.reduce((s, it) => s + it.qty * it.price, 0)}</span></div>
+<div class="items">${o.items.map(it => `${it.name} x${it.qty}`).join('、')}</div>
+${o.note? `<div class="note">備註：${o.note}</div>`: ''}
+<div class="note">${new Date(o.createdAt).toLocaleString('zh-TW')}</div>
+</div>`).join('');
+}
+
+function exportText() {
+let txt = `結單\n`;
+txt += `人數：${new Set(orders.map(o => o.ordererName)).size}｜總數：${orders.reduce((s, o) => s + o.items.reduce((a, it) => a + it.qty, 0), 0)}｜總金額：$${document.getElementById('stat-amount').textContent}\n\n`;
+orders.forEach(o => {
+txt += `${o.ordererName}：${o.items.map(it => `${it.name}x${it.qty}`).join('、')}${o.note? `（${o.note}）`: ''}\n`;
+});
+navigator.clipboard.writeText(txt).then(() => alert('結單文字已複製'));
+}
+
+async function clearOrders() {
+if (confirm('確定清空所有訂單？此動作無法復原')) await DB.clearOrders();
+}
+
+init();
+</script>
+</body>
+</html>
+開團者後台</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0;}
 body { font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif; background: #f5f5f5; color: #333;}
